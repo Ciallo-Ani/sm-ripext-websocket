@@ -267,8 +267,6 @@ class ExtensionConfig(object):
     cxx.defines += [
       'WIN32', 
       '_WINDOWS',
-      '_WIN32_WINDOWS',
-      '_WINSOCK_DEPRECATED_NO_WARNINGS',
     ]
 
   def ConfigureForExtension(self, context, compiler):
