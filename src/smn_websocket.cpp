@@ -280,8 +280,5 @@ const sp_nativeinfo_t sm_websocket_natives[] = {
     {"WebSocket.SetDisconnectCallback", native_SetDisconnectCallback},
     {"WebSocket.SetConnectCallback", native_SetConnectCallback},
     {"WebSocket.Write", native_Write},
-    {"WebSocket_FromURL", native_FromURL},
-    {"WebSocket_Create", native_WebSocket},
-    {"WebSocket_CreateSSL", native_WebSocketSSL},
     {NULL, NULL}
 };
