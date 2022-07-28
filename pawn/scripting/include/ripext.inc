@@ -5,6 +5,7 @@
 
 #include <ripext/json>
 #include <ripext/http>
+#include <ripext/websocket>
 
 /**
  * Do not edit below this line!
