@@ -1,4 +1,4 @@
-name: CI
+name: Build
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -13,9 +13,11 @@ jobs:
         include:
           - os: ubuntu-latest
             target-archs: x86
+            os_name: ubuntu-latest
 
           - os: windows-2019
             target-archs: x86
+            os_name: windows-2019
 
     steps:
       - name: Install Linux packages
@@ -59,5 +61,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}
+          name: ${{ matrix.os_name }}
           path: extension/build/package
