@@ -9,8 +9,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest,windows-2019]
+        os: [ubuntu-18.04,ubuntu-latest,windows-2019]
         include:
+          - os: ubuntu-18.04
+            target-archs: x86
+            os_name: ubuntu-18.04
+
           - os: ubuntu-latest
             target-archs: x86
             os_name: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install -yq --no-install-recommends gcc-multilib g++-multilib libssl-dev:i386 libboost-dev:i386 libboost-system-dev:i386
+          sudo apt install -yq --no-install-recommends gcc-multilib g++-multilib libssl-dev:i386
 
       - name: Set up Python
         uses: actions/setup-python@v2

@@ -39,7 +39,9 @@ for cxx in builder.targets:
   ]
 
   if binary.compiler.target.platform == 'linux':
-    binary.compiler.includes += []
+    binary.compiler.includes += [
+      os.path.join(builder.sourcePath, 'windows' ,'boost'),
+    ]
   elif binary.compiler.target.platform == 'windows':
     binary.compiler.includes += [
       os.path.join(builder.sourcePath, 'windows' ,'openssl', 'include'),
