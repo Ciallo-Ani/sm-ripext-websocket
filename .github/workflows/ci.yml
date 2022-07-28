@@ -9,24 +9,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, windows-2019, macos-10.15]
-        sourcemod-version: [1.10-dev]
+        os: [ubuntu-latest,windows-2019]
         include:
-          - os: ubuntu-18.04
-            target-archs: x86,x86_64
+          - os: ubuntu-latest
+            target-archs: x86
 
           - os: windows-2019
-            target-archs: x86,x86_64
-
-          - os: macos-10.15
-            target-archs: x86_64
+            target-archs: x86
 
     steps:
       - name: Install Linux packages
         if: runner.os == 'Linux'
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install -yq --no-install-recommends g++-multilib
+          sudo apt install -yq --no-install-recommends gcc-multilib g++-multilib libssl-dev:i386 libboost-dev:i386 libboost-system-dev:i386
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -35,13 +32,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: extension
-
-      - name: Checkout SourceMod
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/sourcemod
-          ref: ${{ matrix.sourcemod-version }}
-          path: sourcemod
           submodules: recursive
 
       - name: Checkout AMBuild
@@ -63,8 +53,7 @@ jobs:
         run: |
           mkdir build && cd build
           perl ../curl/lib/mk-ca-bundle.pl
-          python ../configure.py --enable-optimize --targets=${{ matrix.target-archs }} \
-            ${{ github.ref == 'refs/heads/main' && '--breakpad-dump --symbol-files' || '' }}
+          python ../configure.py --enable-optimize --targets=${{ matrix.target-archs }} --sm-path ../sourcemod
           ambuild
 
       - name: Upload artifact
@@ -72,29 +61,3 @@ jobs:
         with:
           name: ${{ runner.os }}
           path: extension/build/package
-
-
-  release:
-    name: Release
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-
-      - name: Package
-        run: |
-          version=`echo $GITHUB_REF | sed "s/refs\/tags\///"`
-          7z a sm-ripext-${version}-linux.zip ./Linux/*
-          7z a sm-ripext-${version}-mac.zip ./macOS/*
-          7z a sm-ripext-${version}-windows.zip ./Windows/*
-
-      - name: Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: '*.zip'
-          tag: ${{ github.ref }}
-          file_glob: true

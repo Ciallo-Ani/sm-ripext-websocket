@@ -139,13 +139,15 @@ class ExtensionConfig(object):
       '-Wno-switch',
       '-Wno-array-bounds',
       '-msse',
+      '-m32',
       '-fvisibility=hidden',
+      '-fexceptions',
     ]
 
     if cxx.version == 'apple-clang-6.0' or cxx.version == 'clang-3.4':
       cxx.cxxflags += ['-std=c++1y']
     else:
-      cxx.cxxflags += ['-std=c++14']
+      cxx.cxxflags += ['-std=c++17']
 
     cxx.cxxflags += [
       '-fno-exceptions',
@@ -153,7 +155,10 @@ class ExtensionConfig(object):
       '-Wno-non-virtual-dtor',
       '-Wno-overloaded-virtual',
       '-fvisibility-inlines-hidden',
+      '-m32',
+      '-fexceptions',
     ]
+    cxx.linkflags += ['-m32']
 
     have_gcc = cxx.family == 'gcc'
     have_clang = cxx.family == 'clang'
@@ -259,7 +264,12 @@ class ExtensionConfig(object):
     cxx.cxxflags += ['-stdlib=libc++']
 
   def configure_windows(self, cxx):
-    cxx.defines += ['WIN32', '_WINDOWS']
+    cxx.defines += [
+      'WIN32', 
+      '_WINDOWS',
+      '_WIN32_WINDOWS',
+      '_WINSOCK_DEPRECATED_NO_WARNINGS',
+    ]
 
   def ConfigureForExtension(self, context, compiler):
     compiler.cxxincludes += [
@@ -302,6 +312,3 @@ if builder.backend == 'amb2':
   ]
 
 builder.Build(BuildScripts, {'Extension': Extension})
-
-if builder.options.breakpad_dump:
-  builder.Build('BreakpadSymbols', {'Extension': Extension})

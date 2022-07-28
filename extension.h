@@ -22,6 +22,7 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
+#pragma once
 #include <string>
 #include <curl/curl.h>
 #include <jansson.h>
@@ -30,6 +31,8 @@
 #include <string.h>
 #include <uv.h>
 #include "smsdk_ext.h"
+#include <memory>
+#include <functional>
 
 #define SM_RIPEXT_CA_BUNDLE_PATH "configs/ripext/ca-bundle.crt"
 #define SM_RIPEXT_USER_AGENT "sm-ripext/" SMEXT_CONF_VERSION
@@ -140,6 +143,9 @@ public:
 	 * @return			True if working, false otherwise.
 	 */
 	//virtual bool QueryRunning(char *error, size_t maxlength);
+	virtual void LogMessage(const char *msg, ...);
+    virtual void LogError(const char *msg, ...);
+    virtual void Defer(std::function<void()> callback);
 public:
 #if defined SMEXT_CONF_METAMOD
 	/**
@@ -177,6 +183,22 @@ public:
 	void AddRequestToQueue(IHTTPContext *context);
 
 	char caBundlePath[PLATFORM_MAX_PATH];
+};
+
+class WebSocketBase {
+    friend class RipExt;
+
+public:
+    WebSocketBase() {
+        next = WebSocketBase::head;
+        WebSocketBase::head = this;
+    }
+
+    virtual void OnExtLoad() { };
+    virtual void OnExtUnload() { };
+private:
+    WebSocketBase *next;
+    static WebSocketBase *head;
 };
 
 class HTTPClientHandler : public IHandleTypeDispatch

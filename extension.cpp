@@ -23,6 +23,7 @@
 #include "httpclient.h"
 #include "httprequest.h"
 #include "queue.h"
+#include <atomic>
 
 // Limit the max processing request per tick
 #define MAX_PROCESS 10
@@ -56,6 +57,9 @@ HandleType_t		htJSON;
 
 JSONObjectKeysHandler	g_JSONObjectKeysHandler;
 HandleType_t			htJSONObjectKeys;
+
+WebSocketBase *WebSocketBase::head = NULL;
+std::atomic<bool> unloaded;
 
 static void CheckCompletedRequests()
 {
@@ -214,6 +218,11 @@ static void FrameHook(bool simulating)
 
 bool RipExt::SDK_OnLoad(char *error, size_t maxlength, bool late)
 {
+	WebSocketBase *head = WebSocketBase::head;
+    while (head) {
+        head->OnExtLoad();
+        head = head->next;
+    }
 	sharesys->AddNatives(myself, http_natives);
 	sharesys->AddNatives(myself, json_natives);
 	sharesys->RegisterLibrary(myself, "ripext");
@@ -261,11 +270,18 @@ bool RipExt::SDK_OnLoad(char *error, size_t maxlength, bool late)
 	smutils->AddGameFrameHook(&FrameHook);
 	smutils->BuildPath(Path_SM, caBundlePath, sizeof(caBundlePath), SM_RIPEXT_CA_BUNDLE_PATH);
 
+	unloaded.store(false);
+
 	return true;
 }
 
 void RipExt::SDK_OnUnload()
 {
+	WebSocketBase *head = WebSocketBase::head;
+    while (head) {
+        head->OnExtUnload();
+        head = head->next;
+    }
 	uv_async_send(&g_AsyncStopLoop);
 	uv_thread_join(&g_Thread);
 	uv_loop_close(g_Loop);
@@ -280,6 +296,7 @@ void RipExt::SDK_OnUnload()
 	handlesys->RemoveType(htJSONObjectKeys, myself->GetIdentity());
 
 	smutils->RemoveGameFrameHook(&FrameHook);
+	unloaded.store(true);
 }
 
 void RipExt::AddRequestToQueue(IHTTPContext *context)
@@ -312,4 +329,50 @@ void JSONHandler::OnHandleDestroy(HandleType_t type, void *object)
 void JSONObjectKeysHandler::OnHandleDestroy(HandleType_t type, void *object)
 {
 	delete (struct JSONObjectKeys *)object;
+}
+
+//websocket
+void log_msg(void *msg) {
+    if (!unloaded.load()) {
+        smutils->LogMessage(myself, reinterpret_cast<char *>(msg));
+    }
+    free(msg);
+}
+
+
+void log_err(void *msg) {
+    if (!unloaded.load()) {
+        smutils->LogError(myself, reinterpret_cast<char *>(msg));
+    }
+    free(msg);
+}
+
+void RipExt::LogMessage(const char *msg, ...) {
+    char *buffer = reinterpret_cast<char *>(malloc(3072));
+    va_list vp;
+    va_start(vp, msg);
+    vsnprintf(buffer, 3072, msg, vp);
+    va_end(vp);
+
+    smutils->AddFrameAction(&log_msg, reinterpret_cast<void *>(buffer));
+}
+
+void RipExt::LogError(const char *msg, ...) {
+    char *buffer = reinterpret_cast<char *>(malloc(3072));
+    va_list vp;
+    va_start(vp, msg);
+    vsnprintf(buffer, 3072, msg, vp);
+    va_end(vp);
+    
+    smutils->AddFrameAction(&log_err, reinterpret_cast<void *>(buffer));
+}
+
+void execute_cb(void *cb) {
+    std::unique_ptr<std::function<void()>> callback(reinterpret_cast<std::function<void()> *>(cb));
+    callback->operator()();
+}
+
+void RipExt::Defer(std::function<void()> callback) {
+    std::unique_ptr<std::function<void()>> cb = std::make_unique<std::function<void()>>(callback);
+    smutils->AddFrameAction(&execute_cb, cb.release());
 }
